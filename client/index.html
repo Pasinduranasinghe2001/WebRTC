@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ConnectHub</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<header class="appbar">
+  <div class="brand">
+    <div class="logo">CH</div>
+    <div>
+      <div class="name">ConnectHub</div>
+      <div class="sub">Multi-User WebRTC Conference</div>
+    </div>
+  </div>
+
+  <div class="topRight">
+    <div class="pill">
+      <div class="pillLabel">Meeting ID</div>
+      <div id="meetingId" class="pillValue">-</div>
+      <button id="copyId" class="btn ghost">Copy</button>
+    </div>
+
+    <button id="renameBtn" class="btn">Rename</button>
+    <div class="avatar" id="avatar">G</div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="home" class="home card">
+    <h2>Start or Join a Meeting</h2>
+    <p class="muted">Default: camera OFF, mic OFF.</p>
+
+    <div class="grid2">
+      <div>
+        <label>Name</label>
+        <input id="nameInput" class="input" placeholder="Your name" />
+      </div>
+      <div>
+        <label>Meeting ID</label>
+        <input id="meetingInput" class="input" placeholder="Enter meeting ID" />
+      </div>
+    </div>
+
+    <div class="row">
+      <button id="createBtn" class="btn primary">Create Meeting</button>
+      <button id="joinHomeBtn" class="btn">Join Meeting</button>
+    </div>
+
+    <div class="row">
+      <button id="preMic" class="btn small">Mic: OFF</button>
+      <button id="preCam" class="btn small">Cam: OFF</button>
+    </div>
+
+    <div class="hint">
+      Host approves users in waiting room. Everyone will see everyone (Zoom-like).
+    </div>
+  </section>
+
+  <section id="waiting" class="waiting card" style="display:none;">
+    <h2>Waiting Room</h2>
+    <p class="muted">Host must approve your request.</p>
+    <div id="waitingInfo" class="hint"></div>
+    <button id="cancelWait" class="btn">Cancel</button>
+  </section>
+
+  <section id="meeting" class="meeting" style="display:none;">
+    <div class="meetingTop card">
+      <div class="counts">
+        <div><b>Participants:</b> <span id="countApproved">0</span></div>
+        <div><b>Waiting:</b> <span id="countWaiting">0</span></div>
+        <div><b>Host:</b> <span id="hostName">-</span></div>
+      </div>
+
+      <div class="topActions2">
+        <button id="leaveBtn" class="btn danger">Leave</button>
+        <button id="settingsBtn" class="btn">Settings</button>
+        <button id="chatToggle" class="btn">Chat</button>
+        <button id="openHostPanel" class="btn ghost">Waiting Room</button>
+      </div>
+
+      <div id="status" class="status">Idle</div>
+    </div>
+
+    <div class="meetingBody">
+      <div class="videoArea">
+        <div class="videoGrid" id="videoGrid">
+          <div class="tile card" data-peer="local">
+            <div class="tileTop">
+              <span class="dot green"></span>
+              <span>You (Local)</span>
+              <span class="badges">
+                <span id="localMic" class="badge">🎤 OFF</span>
+                <span id="localCam" class="badge">📷 OFF</span>
+              </span>
+            </div>
+            <video id="localVideo" autoplay playsinline muted></video>
+          </div>
+        </div>
+
+        <div class="controls card">
+          <button id="muteBtn" class="btn control">Mic: OFF</button>
+          <button id="camBtn" class="btn control">Cam: OFF</button>
+        </div>
+      </div>
+
+      <aside class="chat card" id="chatPane">
+        <div class="chatHead">
+          <div>
+            <div class="chatTitle">Chat</div>
+            <div class="muted small">Group + Direct</div>
+          </div>
+          <button id="chatMin" class="btn small">Minimize</button>
+        </div>
+
+        <div class="chatTabs">
+          <button id="tabAll" class="tab active">All</button>
+          <button id="tabDM" class="tab">Direct</button>
+          <select id="dmTarget" class="input small"></select>
+        </div>
+
+        <div id="chatLog" class="chatLog"></div>
+
+        <div class="chatSend">
+          <input id="chatInput" class="input" placeholder="Type message..." />
+          <button id="sendChat" class="btn primary">Send</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<div id="hostPanel" class="modalBackdrop" style="display:none;">
+  <div class="modal card">
+    <div class="modalTop">
+      <div class="modalTitle">Waiting Room (Host)</div>
+      <button id="closeHostPanel" class="btn small">Close</button>
+    </div>
+
+    <div class="muted">Approve or reject users.</div>
+    <div id="waitingList" class="list"></div>
+
+    <div class="divider"></div>
+
+    <div class="muted">Transfer Host</div>
+    <div class="row">
+      <select id="hostTransferSelect" class="input"></select>
+      <button id="transferHostBtn" class="btn">Transfer</button>
+    </div>
+  </div>
+</div>
+
+<div id="settingsModal" class="modalBackdrop" style="display:none;">
+  <div class="modal card">
+    <div class="modalTop">
+      <div class="modalTitle">Settings</div>
+      <button id="closeSettings" class="btn small">Close</button>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>Camera</label>
+        <select id="camSelect" class="input"></select>
+      </div>
+      <div>
+        <label>Microphone</label>
+        <select id="micSelect" class="input"></select>
+      </div>
+    </div>
+
+    <div class="hint">Apply will reopen camera/mic stream.</div>
+    <div class="row">
+      <button id="applyDevices" class="btn primary">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
