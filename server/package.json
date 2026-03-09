@@ -6,9 +6,11 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
+    "nodemon": "^3.1.14",
     "socket.io": "^4.7.5"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   }
 }

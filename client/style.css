@@ -2,66 +2,95 @@
 body{
   margin:0;
   font-family:system-ui,Segoe UI,Roboto,Arial;
-  background:#10131a;
-  color:#e9eefb;
+  background:radial-gradient(1200px 600px at top,#141a28,#0c0f16);
+  color:#eef2ff;
 }
+
+/* ================= THEME TOKENS ================= */
 :root{
-  --card:#171c26;
-  --card2:#1b2230;
-  --line:rgba(233,238,251,.10);
-  --muted:rgba(233,238,251,.65);
-  --blue:#2d6bff;
-  --blue2:#1f4bd6;
-  --shadow:0 14px 40px rgba(0,0,0,.35);
+  --card:#161b2a;
+  --card2:#1d2436;
+  --line:rgba(238,242,255,.08);
+  --muted:rgba(238,242,255,.6);
+
+  /* Accent colors (NOT blue) */
+  --accent:#18d6c2;          /* teal */
+  --accent2:#7c4dff;         /* violet */
+  --accentGlow:rgba(24,214,194,.30);
+
+  --danger:#ff5c5c;
+
+  --shadow:0 18px 48px rgba(0,0,0,.45);
+  --softShadow:0 8px 24px rgba(0,0,0,.35);
+
   --r:18px;
 }
+
+/* ================= CARDS ================= */
 .card{
   background:linear-gradient(180deg,var(--card),var(--card2));
   border:1px solid var(--line);
   border-radius:var(--r);
   box-shadow:var(--shadow);
 }
+
+/* ================= APP BAR ================= */
 .appbar{
   height:74px;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:0 16px;
+  padding:0 18px;
   border-bottom:1px solid var(--line);
-  background:rgba(16,19,26,.75);
-  backdrop-filter: blur(10px);
+  background:rgba(12,15,22,.75);
+  backdrop-filter: blur(14px);
 }
+
 .brand{display:flex;gap:12px;align-items:center}
+
 .logo{
   width:44px;height:44px;border-radius:14px;
   display:grid;place-items:center;
-  background:linear-gradient(135deg,var(--blue),var(--blue2));
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  box-shadow:0 6px 20px var(--accentGlow);
   font-weight:900;
 }
+
 .name{font-weight:900;font-size:18px}
 .sub{font-size:12px;color:var(--muted);font-weight:700}
+
+/* ================= TOP RIGHT ================= */
 .topRight{display:flex;gap:10px;align-items:center}
+
 .pill{
   display:flex;gap:10px;align-items:center;
   padding:10px 12px;border-radius:14px;
   border:1px solid var(--line);
   background:rgba(255,255,255,.04);
+  box-shadow:var(--softShadow);
 }
+
 .pillLabel{font-size:12px;color:var(--muted);font-weight:800}
+
 .pillValue{
   font-family:ui-monospace,Consolas,monospace;
   font-weight:900;font-size:13px;
   max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
+
 .avatar{
   width:40px;height:40px;border-radius:999px;
   display:grid;place-items:center;
-  background:rgba(45,107,255,.18);
-  border:1px solid rgba(45,107,255,.35);
+  background:rgba(24,214,194,.16);
+  border:1px solid rgba(24,214,194,.32);
+  box-shadow:0 0 0 4px rgba(24,214,194,.08);
   font-weight:900;
 }
+
+/* ================= LAYOUT ================= */
 .wrap{padding:16px;max-width:1250px;margin:0 auto}
 .home, .waiting{padding:16px}
+
 h2{margin:0 0 10px 0}
 .muted{color:var(--muted);font-weight:700}
 .small{font-size:12px}
@@ -69,74 +98,124 @@ h2{margin:0 0 10px 0}
 
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+
 label{font-size:12px;color:var(--muted);font-weight:800}
 .row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center}
 
+/* ================= INPUTS ================= */
 .input{
   width:100%;
   padding:12px 14px;
   border-radius:14px;
   border:1px solid var(--line);
   outline:none;
-  background:rgba(255,255,255,.05);
-  color:#e9eefb;
+  background:rgba(255,255,255,.04);
+  color:#eef2ff;
   font-weight:800;
 }
-.input:focus{border-color:rgba(45,107,255,.45);box-shadow:0 0 0 4px rgba(45,107,255,.15)}
+.input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 4px rgba(24,214,194,.18)
+}
 
+/* ================= BUTTONS ================= */
 .btn{
   padding:10px 14px;
   border-radius:12px;
   border:1px solid var(--line);
-  background:rgba(255,255,255,.06);
-  color:#e9eefb;
+  background:rgba(255,255,255,.05);
+  color:#eef2ff;
   font-weight:900;
   cursor:pointer;
+  transition:all .15s ease;
 }
-.btn:hover{border-color:rgba(45,107,255,.35)}
-.btn.primary{
-  border:none;
-  background:linear-gradient(135deg,var(--blue),var(--blue2));
-}
-.btn.ghost{
-  background:rgba(255,255,255,.08);
-  border:1px solid rgba(255,255,255,.18);
-}
-.btn.small{padding:8px 10px;font-size:12px}
-.btn.danger{
-  background:rgba(255,70,70,.12);
-  border:1px solid rgba(255,70,70,.3);
+.btn:hover{
+  border-color:rgba(24,214,194,.45);
+  transform:translateY(-1px);
 }
 
-.meetingTop{padding:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.btn.primary{
+  border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  box-shadow:0 8px 24px var(--accentGlow);
+}
+
+.btn.ghost{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.2);
+}
+
+.btn.small{padding:8px 10px;font-size:12px}
+
+.btn.danger{
+  background:rgba(255,92,92,.15);
+  border:1px solid rgba(255,92,92,.4);
+}
+
+/* ================= MEETING ================= */
+.meetingTop{
+  padding:12px;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap
+}
+
 .counts{display:flex;gap:16px;flex-wrap:wrap;font-weight:800}
 .topActions2{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap}
 .status{color:var(--muted);font-weight:800}
 
-.meetingBody{display:grid;grid-template-columns:1fr 360px;gap:14px;margin-top:14px}
+.meetingBody{
+  display:grid;
+  grid-template-columns:1fr 360px;
+  gap:14px;
+  margin-top:14px
+}
 @media(max-width:980px){.meetingBody{grid-template-columns:1fr}}
 
 .videoArea{display:flex;flex-direction:column;gap:12px}
-.videoGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+
+.videoGrid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px
+}
 @media(max-width:820px){.videoGrid{grid-template-columns:1fr}}
 
 .tile{padding:12px}
+
 .tileTop{
-  display:flex;gap:10px;align-items:center;
-  color:var(--muted);font-weight:900;margin-bottom:10px
+  display:flex;
+  gap:10px;
+  align-items:center;
+  color:var(--muted);
+  font-weight:900;
+  margin-bottom:10px
 }
+
 .badges{margin-left:auto;display:flex;gap:8px;align-items:center}
+
 .badge{
   font-size:11px;
   padding:6px 8px;
   border-radius:999px;
   border:1px solid var(--line);
   background:rgba(255,255,255,.06);
-  color:#e9eefb;
   font-weight:900;
 }
-.dot{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.3);border:2px solid rgba(0,0,0,.2)}
-.dot.green{background:#00d26a}
+
+.dot{
+  width:10px;height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.35);
+  border:2px solid rgba(0,0,0,.3)
+}
+.dot.green{
+  background:#00e676;
+  box-shadow:0 0 0 3px rgba(0,230,118,.25)
+}
+
+/* ================= VIDEO ================= */
 video{
   width:100%;
   height:260px;
@@ -144,20 +223,55 @@ video{
   border-radius:16px;
   border:1px solid rgba(255,255,255,.08);
   object-fit:cover;
+  box-shadow:var(--softShadow);
 }
-.controls{padding:12px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* ================= CONTROLS ================= */
+.controls{
+  padding:12px;
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap
+}
 .btn.control{min-width:130px}
 
+/* ================= CHAT ================= */
 .chat{display:flex;flex-direction:column;overflow:hidden}
-.chatHead{padding:12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
-.chatTitle{font-weight:1000}
-.chatTabs{padding:10px;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
-.tab{
-  padding:8px 10px;border-radius:12px;border:1px solid var(--line);
-  background:rgba(255,255,255,.06);cursor:pointer;font-weight:900;color:#e9eefb;
+
+.chatHead{
+  padding:12px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:center
 }
-.tab.active{border-color:rgba(45,107,255,.5);background:rgba(45,107,255,.18)}
+
+.chatTitle{font-weight:1000}
+
+.chatTabs{
+  padding:10px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  border-bottom:1px solid var(--line)
+}
+
+.tab{
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.06);
+  cursor:pointer;
+  font-weight:900;
+}
+.tab.active{
+  border-color:var(--accent);
+  background:rgba(24,214,194,.16)
+}
+
 .chatLog{padding:12px;flex:1;overflow:auto}
+
 .msg{
   background:rgba(255,255,255,.06);
   border:1px solid var(--line);
@@ -166,39 +280,71 @@ video{
   margin:8px 0;
   font-weight:750;
 }
-.chatSend{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line)}
 
-.modalBackdrop{
-  position:fixed;inset:0;
-  background:rgba(0,0,0,.55);
-  display:grid;place-items:center;
-  padding:16px;
+.chatSend{
+  display:flex;
+  gap:10px;
+  padding:12px;
+  border-top:1px solid var(--line)
 }
-.modal{width:min(720px,92vw);padding:14px}
-.modalTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+
+/* ================= MODAL ================= */
+.modalBackdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.6);
+  display:grid;
+  place-items:center;
+  padding:16px
+}
+
+.modal{
+  width:min(720px,92vw);
+  padding:14px
+}
+
+.modalTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px
+}
+
 .modalTitle{font-weight:1000}
 .divider{height:1px;background:var(--line);margin:12px 0}
-.list{margin-top:10px;display:flex;flex-direction:column;gap:10px}
-.listItem{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:10px;border:1px solid var(--line);border-radius:14px;
-  background:rgba(255,255,255,.05);
-}
-/* ---------- Chat message types ---------- */
-.msg.system {
-  font-size: 8px;
-  color: rgba(216, 240, 31, 0.65);
-  text-align: center;
-  background: rgba(255,255,255,.03);
-  border: 1px dashed rgba(233,238,251,.18);
-  padding: 8px 12px;
-  border-radius: 999px;
-  max-width: 55%;
-  margin: 10px auto;     /* center */
-  font-weight: 800;
+
+/* ================= LIST ================= */
+.list{
+  margin-top:10px;
+  display:flex;
+  flex-direction:column;
+  gap:10px
 }
 
-/* optional: normal messages slightly larger */
-.msg.normal {
-  font-size: 14px;
+.listItem{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:rgba(255,255,255,.05)
+}
+
+/* ================= CHAT MESSAGE TYPES ================= */
+.msg.system{
+  font-size:10px;
+  color:rgba(200,240,235,.78);
+  text-align:center;
+  background:rgba(255,255,255,.03);
+  border:1px dashed rgba(233,238,251,.18);
+  padding:8px 12px;
+  border-radius:999px;
+  max-width:60%;
+  margin:10px auto;
+  font-weight:900;
+}
+
+.msg.normal{
+  font-size:14px;
 }

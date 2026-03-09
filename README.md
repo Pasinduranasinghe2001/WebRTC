@@ -166,6 +166,3 @@ Open PR: `feature/your-task` → `develop`
 
 ---
 
-## License
-
-MIT (or change as you prefer)
