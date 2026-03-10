@@ -74,8 +74,10 @@ let hostId = null;
 let localStream = null;
 let mediaReady = false;
 
-let micOn = false; // default OFF
-let camOn = false; // default OFF
+// Keep default OFF if you want same UI behavior.
+// If you want microphone to start automatically, change micOn to true.
+let micOn = false;
+let camOn = false;
 
 let selectedCamId = "";
 let selectedMicId = "";
@@ -90,10 +92,14 @@ function setPage(which) {
   meeting.style.display = which === "meeting" ? "block" : "none";
 }
 
-function setStatus(t) { statusEl.textContent = t; }
+function setStatus(t) {
+  statusEl.textContent = t;
+}
 
 function genMeetingId() {
-  return (crypto.randomUUID?.() || String(Math.random())).replaceAll("-", "").slice(0, 12);
+  return (crypto.randomUUID?.() || String(Math.random()))
+    .replaceAll("-", "")
+    .slice(0, 12);
 }
 
 function setAvatar() {
@@ -104,7 +110,6 @@ function setAvatar() {
 function logMsg(text) {
   const div = document.createElement("div");
 
-  // detect system message
   const isSystem =
     text.startsWith("System:") ||
     text.startsWith("SYSTEM:") ||
@@ -112,19 +117,21 @@ function logMsg(text) {
     text.startsWith("✅");
 
   div.className = "msg " + (isSystem ? "system" : "normal");
- div.textContent = isSystem ? text.replace(/^System:\s*/i, "") : text;
+  div.textContent = isSystem ? text.replace(/^System:\s*/i, "") : text;
 
   chatLog.appendChild(div);
   chatLog.scrollTop = chatLog.scrollHeight;
 }
 
 function hostNameFromId(id) {
-  const u = approvedUsers.find(x => x.id === id);
+  const u = approvedUsers.find((x) => x.id === id);
   return u ? u.name : "-";
 }
 
 async function copyText(t) {
-  try { await navigator.clipboard.writeText(t); } catch {}
+  try {
+    await navigator.clipboard.writeText(t);
+  } catch {}
 }
 
 function refreshDMTargets() {
@@ -134,12 +141,14 @@ function refreshDMTargets() {
   opt0.textContent = "Select user…";
   dmTarget.appendChild(opt0);
 
-  approvedUsers.filter(u => u.id !== myId).forEach(u => {
-    const o = document.createElement("option");
-    o.value = u.id;
-    o.textContent = u.name;
-    dmTarget.appendChild(o);
-  });
+  approvedUsers
+    .filter((u) => u.id !== myId)
+    .forEach((u) => {
+      const o = document.createElement("option");
+      o.value = u.id;
+      o.textContent = u.name;
+      dmTarget.appendChild(o);
+    });
 }
 
 function updateLocalBadges() {
@@ -149,16 +158,29 @@ function updateLocalBadges() {
   camBtn.textContent = camOn ? "Cam: ON" : "Cam: OFF";
 }
 
+function updatePreJoinButtons() {
+  if (preMicBtn) preMicBtn.textContent = micOn ? "Mic: ON" : "Mic: OFF";
+  if (preCamBtn) preCamBtn.textContent = camOn ? "Cam: ON" : "Cam: OFF";
+}
+
+async function safePlay(videoEl) {
+  try {
+    await videoEl.play();
+  } catch (err) {
+    console.log("Autoplay blocked or delayed:", err);
+  }
+}
+
 // ----- Devices -----
 async function loadDevices() {
   try {
     const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    tmp.getTracks().forEach(t => t.stop());
+    tmp.getTracks().forEach((t) => t.stop());
   } catch {}
 
   const devs = await navigator.mediaDevices.enumerateDevices();
-  const cams = devs.filter(d => d.kind === "videoinput");
-  const mics = devs.filter(d => d.kind === "audioinput");
+  const cams = devs.filter((d) => d.kind === "videoinput");
+  const mics = devs.filter((d) => d.kind === "audioinput");
 
   camSelect.innerHTML = "";
   micSelect.innerHTML = "";
@@ -185,41 +207,87 @@ async function loadDevices() {
 }
 
 async function startLocalMedia() {
-  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  try {
+    if (localStream) {
+      localStream.getTracks().forEach((t) => t.stop());
+    }
 
-  const constraints = {
-    video: selectedCamId ? { deviceId: { exact: selectedCamId } } : true,
-    audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
-  };
+    const constraints = {
+      video: selectedCamId ? { deviceId: { exact: selectedCamId } } : true,
+      audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
+    };
 
-  localStream = await navigator.mediaDevices.getUserMedia(constraints);
+    localStream = await navigator.mediaDevices.getUserMedia(constraints);
 
+    const a = localStream.getAudioTracks()[0];
+    const v = localStream.getVideoTracks()[0];
+
+    if (a) a.enabled = micOn;
+    if (v) v.enabled = camOn;
+
+    localVideo.srcObject = localStream;
+    localVideo.muted = true;
+    await safePlay(localVideo);
+
+    mediaReady = true;
+
+    console.log("Local media ready:", {
+      hasAudio: !!a,
+      hasVideo: !!v,
+      micEnabled: !!a && a.enabled,
+      camEnabled: !!v && v.enabled,
+      selectedMicId,
+      selectedCamId,
+    });
+
+    updateLocalBadges();
+    updatePreJoinButtons();
+    emitMediaState();
+
+    // Ensure our tracks are attached/replaced in all existing peer connections
+    for (const p of peers.values()) {
+      await replaceOrAddTracks(p.pc);
+    }
+  } catch (err) {
+    console.error("startLocalMedia failed:", err);
+    mediaReady = false;
+    setStatus("Could not access camera/microphone");
+    alert("Could not access camera/microphone. Check browser permission and selected devices.");
+  }
+}
+
+async function replaceOrAddTracks(pc) {
+  if (!localStream) return;
+
+  const senders = pc.getSenders();
   const a = localStream.getAudioTracks()[0];
   const v = localStream.getVideoTracks()[0];
-  if (a) a.enabled = micOn;
-  if (v) v.enabled = camOn;
 
-  localVideo.srcObject = localStream;
-  mediaReady = true;
+  const aSender = senders.find((s) => s.track && s.track.kind === "audio");
+  const vSender = senders.find((s) => s.track && s.track.kind === "video");
 
-  updateLocalBadges();
-  emitMediaState();
+  if (aSender && a) {
+    await aSender.replaceTrack(a);
+  } else if (!aSender && a) {
+    pc.addTrack(a, localStream);
+  }
 
-  // Ensure our tracks are attached to all existing peer connections
-  for (const p of peers.values()) {
-    attachTracksToPeerPC(p.pc);
+  if (vSender && v) {
+    await vSender.replaceTrack(v);
+  } else if (!vSender && v) {
+    pc.addTrack(v, localStream);
   }
 }
 
 function attachTracksToPeerPC(pc) {
   if (!localStream) return;
-  const senders = pc.getSenders();
 
+  const senders = pc.getSenders();
   const a = localStream.getAudioTracks()[0];
   const v = localStream.getVideoTracks()[0];
 
-  const haveA = senders.some(s => s.track && s.track.kind === "audio");
-  const haveV = senders.some(s => s.track && s.track.kind === "video");
+  const haveA = senders.some((s) => s.track && s.track.kind === "audio");
+  const haveV = senders.some((s) => s.track && s.track.kind === "video");
 
   if (a && !haveA) pc.addTrack(a, localStream);
   if (v && !haveV) pc.addTrack(v, localStream);
@@ -253,6 +321,7 @@ function makePeerTile(peerId, peerName) {
   const vid = document.createElement("video");
   vid.autoplay = true;
   vid.playsInline = true;
+  vid.controls = false;
 
   tile.appendChild(top);
   tile.appendChild(vid);
@@ -266,30 +335,29 @@ function removePeerTile(peerId) {
   if (t) t.remove();
 }
 
-// ----- Perfect Negotiation (key fix) -----
+// ----- Perfect Negotiation -----
 function ensurePeer(peerId, peerName) {
   if (peers.has(peerId)) return peers.get(peerId);
 
-  const polite = String(myId) < String(peerId); // deterministic
-  const pc = new RTCPeerConnection({
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
+  const polite = String(myId) < String(peerId);
 
-    // Free TURN server (for testing)
-    {
-      urls: "turn:openrelay.metered.ca:80",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    }
-  ]
-});
+  const pc = new RTCPeerConnection({
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      {
+        urls: "turn:openrelay.metered.ca:80",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+    ],
+  });
 
   const tile = makePeerTile(peerId, peerName);
 
@@ -302,26 +370,47 @@ function ensurePeer(peerId, peerName) {
     micBadge: tile.micBadge,
     camBadge: tile.camBadge,
   };
+
   peers.set(peerId, state);
 
-  // attach local tracks if ready
   if (mediaReady) attachTracksToPeerPC(pc);
 
-  pc.ontrack = (ev) => {
-    state.videoEl.srcObject = ev.streams[0];
+  pc.ontrack = async (ev) => {
+    console.log("Remote track from", peerId, ev.track.kind);
+
+    if (!state.videoEl.srcObject || state.videoEl.srcObject.id !== ev.streams[0].id) {
+      state.videoEl.srcObject = ev.streams[0];
+    }
+
+    state.videoEl.muted = false;
+    await safePlay(state.videoEl);
   };
 
   pc.onicecandidate = ({ candidate }) => {
-    if (candidate) socket.emit("signal", { roomId, to: peerId, data: { candidate } });
+    if (candidate) {
+      socket.emit("signal", { roomId, to: peerId, data: { candidate } });
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    console.log("PC connection state:", peerId, pc.connectionState);
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    console.log("ICE state:", peerId, pc.iceConnectionState);
   };
 
   pc.onnegotiationneeded = async () => {
     try {
       state.makingOffer = true;
       await pc.setLocalDescription(await pc.createOffer());
-      socket.emit("signal", { roomId, to: peerId, data: { description: pc.localDescription } });
+      socket.emit("signal", {
+        roomId,
+        to: peerId,
+        data: { description: pc.localDescription },
+      });
     } catch (e) {
-      // ignore
+      console.error("onnegotiationneeded error:", e);
     } finally {
       state.makingOffer = false;
     }
@@ -331,23 +420,30 @@ function ensurePeer(peerId, peerName) {
 }
 
 async function handleSignal(from, data) {
-  const user = approvedUsers.find(u => u.id === from);
+  const user = approvedUsers.find((u) => u.id === from);
   const peerName = user ? user.name : "Participant";
   const p = ensurePeer(from, peerName);
   const pc = p.pc;
 
   if (data.description) {
     const description = data.description;
+
     const offerCollision =
-      description.type === "offer" && (p.makingOffer || pc.signalingState !== "stable");
+      description.type === "offer" &&
+      (p.makingOffer || pc.signalingState !== "stable");
 
     p.ignoreOffer = !p.polite && offerCollision;
     if (p.ignoreOffer) return;
 
     await pc.setRemoteDescription(description);
+
     if (description.type === "offer") {
       await pc.setLocalDescription(await pc.createAnswer());
-      socket.emit("signal", { roomId, to: from, data: { description: pc.localDescription } });
+      socket.emit("signal", {
+        roomId,
+        to: from,
+        data: { description: pc.localDescription },
+      });
     }
   } else if (data.candidate) {
     try {
@@ -358,20 +454,18 @@ async function handleSignal(from, data) {
   }
 }
 
-// ----- Roster sync (ensures EVERYONE connects to EVERYONE) -----
+// ----- Roster sync -----
 function syncPeersWithRoster() {
   if (!myId) return;
 
-  const rosterIds = new Set(approvedUsers.map(u => u.id));
+  const rosterIds = new Set(approvedUsers.map((u) => u.id));
   rosterIds.delete(myId);
 
-  // add missing peers
   for (const u of approvedUsers) {
     if (u.id === myId) continue;
     ensurePeer(u.id, u.name);
   }
 
-  // remove peers not in roster
   for (const peerId of Array.from(peers.keys())) {
     if (!rosterIds.has(peerId)) {
       peers.get(peerId).pc.close();
@@ -380,12 +474,12 @@ function syncPeersWithRoster() {
     }
   }
 
-  // attach tracks if media ready
   if (mediaReady) {
-    for (const p of peers.values()) attachTracksToPeerPC(p.pc);
+    for (const p of peers.values()) {
+      attachTracksToPeerPC(p.pc);
+    }
   }
 
-  // update badges from roster (mic/cam state)
   for (const u of approvedUsers) {
     if (u.id === myId) continue;
     const p = peers.get(u.id);
@@ -404,12 +498,13 @@ function emitMediaState() {
 // ----- Host UI -----
 function renderHostWaitingList() {
   waitingList.innerHTML = "";
+
   if (!waitingUsers.length) {
     waitingList.innerHTML = `<div class="muted">No waiting users.</div>`;
     return;
   }
 
-  waitingUsers.forEach(u => {
+  waitingUsers.forEach((u) => {
     const row = document.createElement("div");
     row.className = "listItem";
     row.innerHTML = `
@@ -422,22 +517,27 @@ function renderHostWaitingList() {
     waitingList.appendChild(row);
   });
 
-  waitingList.querySelectorAll("[data-approve]").forEach(btn => {
-    btn.onclick = () => socket.emit("approve-user", { roomId, userId: btn.dataset.approve });
+  waitingList.querySelectorAll("[data-approve]").forEach((btn) => {
+    btn.onclick = () =>
+      socket.emit("approve-user", { roomId, userId: btn.dataset.approve });
   });
-  waitingList.querySelectorAll("[data-reject]").forEach(btn => {
-    btn.onclick = () => socket.emit("reject-user", { roomId, userId: btn.dataset.reject });
+
+  waitingList.querySelectorAll("[data-reject]").forEach((btn) => {
+    btn.onclick = () =>
+      socket.emit("reject-user", { roomId, userId: btn.dataset.reject });
   });
 }
 
 function renderHostTransferList() {
   hostTransferSelect.innerHTML = "";
-  approvedUsers.filter(u => u.id !== hostId).forEach(u => {
-    const o = document.createElement("option");
-    o.value = u.id;
-    o.textContent = u.name;
-    hostTransferSelect.appendChild(o);
-  });
+  approvedUsers
+    .filter((u) => u.id !== hostId)
+    .forEach((u) => {
+      const o = document.createElement("option");
+      o.value = u.id;
+      o.textContent = u.name;
+      hostTransferSelect.appendChild(o);
+    });
 }
 
 // ----- Socket -----
@@ -464,7 +564,6 @@ function connectSocket() {
     setPage("meeting");
     setStatus("Starting media...");
 
-    // Start local media (mic/cam default OFF)
     mediaReady = false;
     await startLocalMedia();
 
@@ -474,10 +573,8 @@ function connectSocket() {
     if (isHost) hostPanel.style.display = "grid";
   });
 
-  socket.on("peer-list", ({ peers: list }) => {
-    // server sends roster list; we’ll wait for room-state for the same data too,
-    // but this helps new user build early.
-    // no-op (room-state handles UI and sync)
+  socket.on("peer-list", () => {
+    // room-state handles UI + sync
   });
 
   socket.on("room-state", (snap) => {
@@ -497,12 +594,10 @@ function connectSocket() {
       if (waitingUsers.length > 0) hostPanel.style.display = "grid";
     }
 
-    // ✅ critical: always sync mesh to roster
     syncPeersWithRoster();
   });
 
   socket.on("media-state", ({ id, mic, cam }) => {
-    // live updates without waiting full room-state
     const p = peers.get(id);
     if (p) {
       p.micBadge.textContent = mic ? "🎤 ON" : "🎤 OFF";
@@ -524,13 +619,14 @@ function connectSocket() {
   });
 
   socket.on("roster-changed", () => {
-    // room-state will follow; this is a hint only
+    // room-state will follow
   });
 
   socket.on("system", ({ msg }) => logMsg("System: " + msg));
-
   socket.on("chat-all", ({ name, msg }) => logMsg(`${name}: ${msg}`));
-  socket.on("chat-dm", ({ name, msg, echo }) => logMsg(`${echo ? "(You → DM)" : "(DM)"} ${name}: ${msg}`));
+  socket.on("chat-dm", ({ name, msg, echo }) =>
+    logMsg(`${echo ? "(You → DM)" : "(DM)"} ${name}: ${msg}`)
+  );
 }
 
 // ----- Actions -----
@@ -544,12 +640,11 @@ function resetAll() {
   for (const p of peers.values()) p.pc.close();
   peers.clear();
 
-  // remove all remote tiles
-  Array.from(videoGrid.querySelectorAll(".tile")).forEach(t => {
+  Array.from(videoGrid.querySelectorAll(".tile")).forEach((t) => {
     if (t.dataset.peer !== "local") t.remove();
   });
 
-  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  if (localStream) localStream.getTracks().forEach((t) => t.stop());
   localStream = null;
   localVideo.srcObject = null;
 
@@ -559,7 +654,6 @@ function resetAll() {
   myId = null;
   roomId = "";
   isHost = false;
-
   mediaReady = false;
 
   setStatus("Idle");
@@ -619,44 +713,91 @@ openHostPanelBtn.onclick = () => {
   hostPanel.style.display = "grid";
 };
 
-chatMin.onclick = () => { chatPane.style.display = "none"; };
-chatToggle.onclick = () => { chatPane.style.display = "flex"; };
+chatMin.onclick = () => {
+  chatPane.style.display = "none";
+};
+
+chatToggle.onclick = () => {
+  chatPane.style.display = "flex";
+};
 
 let chatMode = "all";
-tabAll.onclick = () => { chatMode = "all"; tabAll.classList.add("active"); tabDM.classList.remove("active"); };
-tabDM.onclick = () => { chatMode = "dm"; tabDM.classList.add("active"); tabAll.classList.remove("active"); };
+tabAll.onclick = () => {
+  chatMode = "all";
+  tabAll.classList.add("active");
+  tabDM.classList.remove("active");
+};
+
+tabDM.onclick = () => {
+  chatMode = "dm";
+  tabDM.classList.add("active");
+  tabAll.classList.remove("active");
+};
 
 sendChat.onclick = () => {
   const msg = chatInput.value.trim();
   if (!msg) return;
 
-  if (chatMode === "all") socket.emit("chat-all", { roomId, msg });
-  else {
+  if (chatMode === "all") {
+    socket.emit("chat-all", { roomId, msg });
+  } else {
     const to = dmTarget.value;
     if (!to) return alert("Select a user for Direct Message");
     socket.emit("chat-dm", { roomId, to, msg });
   }
+
   chatInput.value = "";
 };
 
-// mic/cam toggles (also broadcast state)
-muteBtn.onclick = () => {
-  if (!localStream) return;
-  const a = localStream.getAudioTracks()[0];
-  if (!a) return;
+// ----- PRE-JOIN MIC/CAM BUTTONS FIX -----
+preMicBtn.onclick = () => {
   micOn = !micOn;
-  a.enabled = micOn;
+  updatePreJoinButtons();
   updateLocalBadges();
+
+  if (localStream) {
+    const a = localStream.getAudioTracks()[0];
+    if (a) a.enabled = micOn;
+    emitMediaState();
+  }
+};
+
+preCamBtn.onclick = () => {
+  camOn = !camOn;
+  updatePreJoinButtons();
+  updateLocalBadges();
+
+  if (localStream) {
+    const v = localStream.getVideoTracks()[0];
+    if (v) v.enabled = camOn;
+    emitMediaState();
+  }
+};
+
+// mic/cam toggles during meeting
+muteBtn.onclick = () => {
+  micOn = !micOn;
+
+  if (localStream) {
+    const a = localStream.getAudioTracks()[0];
+    if (a) a.enabled = micOn;
+  }
+
+  updateLocalBadges();
+  updatePreJoinButtons();
   emitMediaState();
 };
 
 camBtn.onclick = () => {
-  if (!localStream) return;
-  const v = localStream.getVideoTracks()[0];
-  if (!v) return;
   camOn = !camOn;
-  v.enabled = camOn;
+
+  if (localStream) {
+    const v = localStream.getVideoTracks()[0];
+    if (v) v.enabled = camOn;
+  }
+
   updateLocalBadges();
+  updatePreJoinButtons();
   emitMediaState();
 };
 
@@ -665,33 +806,28 @@ settingsBtn.onclick = async () => {
   await loadDevices();
 };
 
-closeSettings.onclick = () => (settingsModal.style.display = "none");
+closeSettings.onclick = () => {
+  settingsModal.style.display = "none";
+};
 
 applyDevices.onclick = async () => {
   selectedCamId = camSelect.value;
   selectedMicId = micSelect.value;
   settingsModal.style.display = "none";
 
-  await startLocalMedia(); // reopens stream
+  await startLocalMedia();
 
-  // Replace tracks in all peer connections
   for (const p of peers.values()) {
-    const pc = p.pc;
-    const senders = pc.getSenders();
-    const a = localStream.getAudioTracks()[0];
-    const v = localStream.getVideoTracks()[0];
-
-    const aSender = senders.find(s => s.track && s.track.kind === "audio");
-    const vSender = senders.find(s => s.track && s.track.kind === "video");
-
-    if (aSender && a) await aSender.replaceTrack(a);
-    if (vSender && v) await vSender.replaceTrack(v);
+    await replaceOrAddTracks(p.pc);
   }
 
   logMsg("System: Devices applied ✅");
 };
 
-closeHostPanel.onclick = () => (hostPanel.style.display = "none");
+closeHostPanel.onclick = () => {
+  hostPanel.style.display = "none";
+};
+
 transferHostBtn.onclick = () => {
   const to = hostTransferSelect.value;
   if (!to) return;
@@ -704,13 +840,14 @@ transferHostBtn.onclick = () => {
   nameInput.value = myName;
   setAvatar();
 
-  // default OFF
+  // keep these OFF by default if you want same UI
   micOn = false;
   camOn = false;
+
   updateLocalBadges();
+  updatePreJoinButtons();
 
   setPage("home");
-
   connectSocket();
   await loadDevices();
 })();
