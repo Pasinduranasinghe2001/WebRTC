@@ -1,6 +1,13 @@
 
 declare interface constraintsType {
-	updateLocalBadges(emitMediaState: any, Ensure: any, our: any, tracks: any, are: any, attached: any, to: any, all: any, existing: any, peer: any, connections: any, for: any, const: any, p: any, of: any, peers: any, values: any): void;
+	updateLocalBadges(): void;
 }
 
-declare interface stateType {}
+declare interface stateType {
+	makingOffer: boolean;
+	ignoreOffer: boolean;
+	videoEl: any;
+	micBadge: any;
+	camBadge: any;
+	tileEl: HTMLElement;
+}
