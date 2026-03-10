@@ -172,6 +172,24 @@ io.on("connection", (socket) => {
     io.to(to).emit("signal", { from: socket.id, data });
   });
 
+  // Raise hand
+  socket.on("raise-hand", ({ roomId, raised }) => {
+    if (!isApproved(roomId, socket.id)) return;
+    io.to(roomId).emit("raise-hand", { id: socket.id, raised: !!raised });
+  });
+
+  // Screen share state
+  socket.on("screen-state", ({ roomId, sharing }) => {
+    if (!isApproved(roomId, socket.id)) return;
+    io.to(roomId).emit("screen-state", { id: socket.id, sharing: !!sharing });
+  });
+
+  // Emoji reaction
+  socket.on("emoji-reaction", ({ roomId, emoji }) => {
+    if (!isApproved(roomId, socket.id)) return;
+    io.to(roomId).emit("emoji-reaction", { id: socket.id, emoji: String(emoji || "") });
+  });
+
   // Chat (group)
   socket.on("chat-all", ({ roomId, msg }) => {
     const r = getRoom(roomId);
