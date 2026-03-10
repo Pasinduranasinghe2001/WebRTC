@@ -271,7 +271,25 @@ function ensurePeer(peerId, peerName) {
   if (peers.has(peerId)) return peers.get(peerId);
 
   const polite = String(myId) < String(peerId); // deterministic
-  const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+  const pc = new RTCPeerConnection({
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+
+    // Free TURN server (for testing)
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject"
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelayproject",
+      credential: "openrelayproject"
+    }
+  ]
+});
 
   const tile = makePeerTile(peerId, peerName);
 
